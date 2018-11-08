@@ -1,6 +1,6 @@
 from pprint import pprint
 
-from benchmark import Benchmark
+from src.benchmark import Benchmark
 
 suite = Benchmark('mlr.classif.ranger_8', 'weka.classifiers.trees.J48_1')
 
