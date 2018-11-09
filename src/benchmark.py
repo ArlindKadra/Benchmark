@@ -102,6 +102,32 @@ class Benchmark(object):
 
         self.df = pandas.DataFrame.from_dict(data=matrix, orient='columns')
 
+    def _validate_entry(self, x):
+        """Validate an entry of the pandas
+        DataFrame.
+
+        Check if a value in the pandas df is non
+        empty and if it passes the requirement.
+
+        Parameters
+        ----------
+        x: set ｜ NaN
+            A value in the pandas DataFrame.
+
+        Returns
+        -------
+        bool
+            Result of the check.
+        """
+        print(x)
+        if isinstance(x, set):
+            if len(x) > self.min_task_flow:
+                return True
+            else:
+                return False
+        else:
+            return False
+
     def get_interesting_tasks(self, evaluation_measure='predictive_accuracy'):
         """Get a list of interesting tasks.
 
@@ -121,10 +147,11 @@ class Benchmark(object):
             and their accuracy. The accuracy is
             averaged over all runs.
         """
-
         # place NaN for tasks that do not achieve
         # the minimum number of runs for a certain flow.
-        revised_df = self.df.applymap(lambda x: x if len(x) >= self.min_task_flow else np.NaN)
+        revised_df = self.df.applymap(
+            lambda x: x if self._validate_entry(x) else np.NaN
+        )
 
         # drop all rows that contain one or more
         # NaN values.
@@ -140,19 +167,21 @@ class Benchmark(object):
         # each entry is the averaged accuracy for
         # all runs of an algorithm.
         accuracies = []
-        for index, row in self.df.iterrows():
-            accuracies.clear()
-            for column in revised_df.columns.values.tolist():
-                run_ids = row[column]
-                for run_id in run_ids:
-                    _ = openml.runs.get_run(run_id)
-                    try:
-                        algorithm_accuracies.append(_.evaluations[evaluation_measure])
-                    except KeyError:
-                        # this evaluation measure is not included
-                        pass
-                accuracies.append(np.mean(algorithm_accuracies))
-                algorithm_accuracies.clear()
-            task_accuracies[index] = np.mean(accuracies)
+        # check if the pandas df has results
+        if len(revised_df.index) > 0:
+            for index, row in revised_df.iterrows():
+                accuracies.clear()
+                for column in revised_df.columns.values.tolist():
+                    run_ids = row[column]
+                    for run_id in run_ids:
+                        _ = openml.runs.get_run(run_id)
+                        try:
+                            algorithm_accuracies.append(_.evaluations[evaluation_measure])
+                        except KeyError:
+                            # this evaluation measure is not included
+                            pass
+                    accuracies.append(np.mean(algorithm_accuracies))
+                    algorithm_accuracies.clear()
+                task_accuracies[index] = np.mean(accuracies)
 
         return pandas.DataFrame.from_dict(task_accuracies, orient='index', columns=['accuracy'])
