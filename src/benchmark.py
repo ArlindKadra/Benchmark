@@ -1,67 +1,23 @@
 from collections import defaultdict, OrderedDict
-import re
 
 import pandas
 import numpy as np
-
 import openml
 
 
-class Benchmark(object):
+class ResultExtracter(object):
 
-    def __init__(self, *flow_identifiers, min_task_flow=100):
+    def __init__(self, *flow_ids, **task_restrictions):
 
         # pandas.DataFrame with all runs for
         # the different flows and tasks
         self.df = None
         self._build_data_frame(
-            self._get_flows(flow_identifiers)
+            *flow_ids
         )
-        self.min_task_flow = min_task_flow
-
-    def _get_flows(self, flow_identifiers):
-        """Get flow ids for the given flow identifiers.
-
-        Match the flow identifiers to their unique flow_id.
-
-        Parameters
-        ----------
-
-        flow_identifiers: list
-            flow_identifiers represent a unique flow.
-            They should be a combination of name_version
-            e.g. 'mlr.classif.ranger_8'.
-            It can also be only a flow name, but in that
-            case, flows with different version will be
-            matched.
-
-        Returns
-        -------
-        flow_ids: set
-            Empty set in case there are no identifiers,
-            otherwise set with flow_ids.
-        """
-
-        flow_ids = set()
-        flows = openml.flows.list_flows()
-        flow_version = None
-
-        # user gave input for flow identifiers.
-        if len(flow_identifiers) != 0:
-            for flow_identifier in flow_identifiers:
-                version_match = re.search(r"\d+$", flow_identifier)
-                if version_match:
-                    flow_version = version_match.group(0)
-                flow_name = re.sub(r"_\d+$", "", flow_identifier)
-
-                for key, flow in flows.items():
-                    if flow['name'] == flow_name:
-                        if flow_version is not None:
-                            if flow['version'] == flow_version:
-                                flow_ids.add(key)
-                        else:
-                            flow_ids.add(key)
-        return flow_ids
+        # Put all the task restrictions as attributes
+        for key, value in task_restrictions.items():
+            setattr(self, key, value)
 
     def _build_data_frame(self, flow_ids):
         """Builds a DataFrame organizing runs based
@@ -92,11 +48,20 @@ class Benchmark(object):
         # inner_dict = {task_id: [run1, run2, run3, ..], ..}
         matrix = defaultdict(lambda: defaultdict(set))
 
-        # go through each run for the given flow_ids
+        # build a dict with the restrictions
+        restrictions = dict()
+        restrictions['uploader'] = \
+            getattr(self, 'uploader', None)
+        restrictions['task_type'] = \
+            getattr(self, 'task_type', None)
+        restrictions['tag'] = \
+            getattr(self, 'tag', None)
+        restrictions['flow'] = flow_ids
+        # go through each run for the given restrictions
         # or through all. Organize them for flows and
         # tasks.
         for run in openml.runs.list_runs(
-            flow=flow_ids if len(flow_ids) > 0 else None
+            **restrictions
         ).values():
             matrix[run['flow_id']][run['task_id']].add(run['run_id'])
 
@@ -119,7 +84,6 @@ class Benchmark(object):
         bool
             Result of the check.
         """
-        print(x)
         if isinstance(x, set):
             if len(x) > self.min_task_flow:
                 return True

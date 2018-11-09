@@ -1,8 +1,8 @@
 from pprint import pprint
 
-from src.benchmark import Benchmark
+from src.benchmark import ResultExtracter
 
-suite = Benchmark('mlr.classif.ranger_8', 'weka.classifiers.trees.J48_1')
+suite = ResultExtracter('mlr.classif.ranger_8', 'weka.classifiers.trees.J48_1')
 
 result = suite.get_interesting_tasks()
 pprint(result.sort_values('accuracy', axis=0))
