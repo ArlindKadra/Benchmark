@@ -1,4 +1,4 @@
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 
 import pandas
 import numpy as np
@@ -11,13 +11,15 @@ class ResultExtracter(object):
 
         # pandas.DataFrame with all runs for
         # the different flows and tasks
-        self.df = None
-        self._build_data_frame(
-            *flow_ids
-        )
+        self._df = None
+
         # Put all the task restrictions as attributes
         for key, value in task_restrictions.items():
             setattr(self, key, value)
+
+        self._build_data_frame(
+            flow_ids
+        )
 
     def _build_data_frame(self, flow_ids):
         """Builds a DataFrame organizing runs based
@@ -65,7 +67,7 @@ class ResultExtracter(object):
         ).values():
             matrix[run['flow_id']][run['task_id']].add(run['run_id'])
 
-        self.df = pandas.DataFrame.from_dict(data=matrix, orient='columns')
+        self._df = pandas.DataFrame.from_dict(data=matrix, orient='columns')
 
     def _validate_entry(self, x):
         """Validate an entry of the pandas
@@ -92,60 +94,23 @@ class ResultExtracter(object):
         else:
             return False
 
-    def get_interesting_tasks(self, evaluation_measure='predictive_accuracy'):
-        """Get a list of interesting tasks.
+    @property
+    def results(self):
 
-        A list of runs will be saved for each dataset that
-        meets the minimum number of runs for the flow list.
+        lower_limit = getattr(self, 'min_task_flow', None)
 
-        Parameters
-        ----------
-        evaluation_measure: str
-            Evaluation measure used to compare the runs.
+        if lower_limit is not None:
+            # place NaN for tasks that do not achieve
+            # the minimum number of runs for a certain flow.
+            revised_df = self.df.applymap(
+                lambda x: x if self._validate_entry(x) else np.NaN
+            )
 
+            # drop all rows that contain one or more
+            # NaN values.
+            revised_df.dropna(how='any', inplace=True)
 
-        Returns
-        -------
-        pandas.DataFrame
-            A DataFrame containing different tasks
-            and their accuracy. The accuracy is
-            averaged over all runs.
-        """
-        # place NaN for tasks that do not achieve
-        # the minimum number of runs for a certain flow.
-        revised_df = self.df.applymap(
-            lambda x: x if self._validate_entry(x) else np.NaN
-        )
+            return revised_df
 
-        # drop all rows that contain one or more
-        # NaN values.
-        revised_df.dropna(how='any', inplace=True)
-
-        # each entry is a task -> accuracy
-        # accuracy is the averaged value for
-        # each algorithm.
-        task_accuracies = OrderedDict()
-        # array to store the accuracies
-        # for an algorithm.
-        algorithm_accuracies = []
-        # each entry is the averaged accuracy for
-        # all runs of an algorithm.
-        accuracies = []
-        # check if the pandas df has results
-        if len(revised_df.index) > 0:
-            for index, row in revised_df.iterrows():
-                accuracies.clear()
-                for column in revised_df.columns.values.tolist():
-                    run_ids = row[column]
-                    for run_id in run_ids:
-                        _ = openml.runs.get_run(run_id)
-                        try:
-                            algorithm_accuracies.append(_.evaluations[evaluation_measure])
-                        except KeyError:
-                            # this evaluation measure is not included
-                            pass
-                    accuracies.append(np.mean(algorithm_accuracies))
-                    algorithm_accuracies.clear()
-                task_accuracies[index] = np.mean(accuracies)
-
-        return pandas.DataFrame.from_dict(task_accuracies, orient='index', columns=['accuracy'])
+        else:
+            return self._df

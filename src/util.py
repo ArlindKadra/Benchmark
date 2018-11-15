@@ -28,15 +28,15 @@ def get_flows_ids(*flow_identifiers):
 
     flow_ids = set()
     flows = openml.flows.list_flows()
-    flow_version = None
 
     # user gave input for flow identifiers.
-
     if len(flow_identifiers) != 0:
         for flow_identifier in flow_identifiers:
             version_match = re.search(r"\d+$", flow_identifier)
             if version_match:
                 flow_version = version_match.group(0)
+            else:
+                flow_version = None
             flow_name = re.sub(r"_\d+$", "", flow_identifier)
 
             for key, flow in flows.items():
