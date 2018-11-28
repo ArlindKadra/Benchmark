@@ -1,12 +1,8 @@
 from collections import OrderedDict
-from pprint import pprint
 
 import numpy as np
 import pandas
 import openml
-
-from benchmark import ResultExtracter
-from util import get_flows_ids
 
 
 def get_tasks_by_measure(data_frame, evaluation_measure='predictive_accuracy'):
@@ -65,9 +61,3 @@ def get_tasks_by_measure(data_frame, evaluation_measure='predictive_accuracy'):
             task_accuracies[index] = np.mean(accuracies)
 
     return pandas.DataFrame.from_dict(task_accuracies, orient='index', columns=['accuracy'])
-
-
-flow_ids = get_flows_ids('mlr.classif.ranger_8')
-result_extracter = ResultExtracter(*flow_ids)
-results = result_extracter.results
-pprint(get_interesting_tasks(results))

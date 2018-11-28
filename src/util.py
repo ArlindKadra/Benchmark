@@ -3,7 +3,7 @@ import re
 import openml
 
 
-def get_flows_ids(*flow_identifiers):
+def get_flow_ids(*flow_identifiers):
     """Get flow ids for the given flow identifiers.
 
     Match the flow identifiers to their unique flow_id.

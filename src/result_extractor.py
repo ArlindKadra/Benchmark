@@ -5,11 +5,11 @@ import numpy as np
 import openml
 
 
-class ResultExtracter(object):
+class ResultExtractor(object):
 
     def __init__(self, *flow_ids, **task_restrictions):
 
-        # pandas.DataFrame with all runs for
+        # pandas.DataFrame with all runs formult
         # the different flows and tasks
         self._df = None
 
