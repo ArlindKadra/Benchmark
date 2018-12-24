@@ -9,10 +9,10 @@ class ResultExtractor(object):
 
     def __init__(self, *flow_ids, **task_restrictions):
 
-        # pandas.DataFrame with all runs formult
+        # pandas.DataFrame with all runs for
         # the different flows and tasks
         self._df = None
-
+        self.flow_ids = flow_ids
         # Put all the task restrictions as attributes
         for key, value in task_restrictions.items():
             setattr(self, key, value)
@@ -29,7 +29,7 @@ class ResultExtractor(object):
         considered by giving a list of flow ids,
         or the check can be performed against all
         flows. A list of runs will be saved for
-        each task and flow.
+        each task and flow combination.
 
         Parameters
         ----------
@@ -37,13 +37,6 @@ class ResultExtractor(object):
         flow_ids: set
             Ids of the flows to be considered. If None, all
             flows will be considered.
-
-
-        Returns
-        -------
-        df: pandas.DataFrame
-            A DataFrame containing all the runs for
-            each task and flow.
         """
         # The structure below is:
         # outer_dict = {flow_id: inner_dict, ....}
@@ -52,16 +45,19 @@ class ResultExtractor(object):
 
         # build a dict with the restrictions
         restrictions = dict()
+        # TODO consider that it should be a list to the function call
         restrictions['uploader'] = \
             getattr(self, 'uploader', None)
         restrictions['task_type'] = \
             getattr(self, 'task_type', None)
         restrictions['tag'] = \
             getattr(self, 'tag', None)
-        restrictions['flow'] = flow_ids
+        restrictions['flow'] = flow_ids \
+            if flow_ids is not None and len(flow_ids) != 0 \
+            else None
+
         # go through each run for the given restrictions
-        # or through all. Organize them for flows and
-        # tasks.
+        # if any. Organize them for flows and tasks.
         for run in openml.runs.list_runs(
             **restrictions
         ).values():
@@ -102,14 +98,13 @@ class ResultExtractor(object):
         if lower_limit is not None:
             # place NaN for tasks that do not achieve
             # the minimum number of runs for a certain flow.
-            revised_df = self.df.applymap(
+            revised_df = self._df.applymap(
                 lambda x: x if self._validate_entry(x) else np.NaN
             )
 
             # drop all rows that contain one or more
-            # NaN values.
+            # NaN values. Basically drop tasks.
             revised_df.dropna(how='any', inplace=True)
-
             return revised_df
 
         else:

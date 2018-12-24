@@ -6,18 +6,19 @@ import openml
 def get_flow_ids(*flow_identifiers):
     """Get flow ids for the given flow identifiers.
 
-    Match the flow identifiers to their unique flow_id.
+    Match the flow identifiers to their flow_ids.
 
     Parameters
     ----------
 
     flow_identifiers: list ｜ str
-        flow_identifiers represent a unique flow.
-        They should be a combination of name_version
+        flow_identifiers should be a combination
+        of name_version
         e.g. 'mlr.classif.ranger_8'.
         It can also be only a flow name, but in that
         case, flows with different version will be
-        matched.
+        matched as a flow name only is not a unique
+        flow identifier.
 
     Returns
     -------
