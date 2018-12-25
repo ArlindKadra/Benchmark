@@ -32,7 +32,7 @@ def get_tasks_by_measure(data_frame, evaluation_measure='predictive_accuracy'):
     Returns
     -------
     pandas.DataFrame
-        A DataFrame containing different task
+        A DataFrame containing task
         and flow combinations along with their
         evaluation measure value.
         The measure is averaged over all runs
@@ -71,8 +71,8 @@ def get_tasks_by_minima_region(
     threshold=0.05
 ):
     """Get a DataFrame with different task and flow
-     combinations showcasing how easy it is for
-     the runs to reach the best found minima region
+     combinations showing how many runs from all using
+     RandomSearch reach the best found minima region
      by a certain threshold.
 
     The DataFrame contains tasks as rows and flows as
@@ -86,6 +86,8 @@ def get_tasks_by_minima_region(
     ----------
     flow_ids: set | None
         Restrictions on which flows to consider.
+        Should be the same as the flows considered
+        in the given data_frame.
     data_frame: pandas.DataFrame
         A pandas DataFrame where the results are organized
         as follows:
@@ -94,14 +96,15 @@ def get_tasks_by_minima_region(
             values - set if there are runs for the flow and
             task combination, otherwise it is NaN.
     order: str
-        What to consider as the best value for a task and flow.
-        The lowest value 'decreasing' or the highest value
-        which corresponds to 'increasing'.
+        What to consider as the best value for the run
+        prediction. The lowest value 'decreasing'
+        or the highest value which corresponds to
+        'increasing'.
     measure: str
         Evaluation measure used to compare the runs.
     threshold: float
-        Maximal difference allowed to consider a run in the
-        minima region.
+        Maximal difference allowed from the best value
+        to consider a run in the minima region.
 
     Returns
     -------
@@ -214,8 +217,8 @@ def get_tasks_by_best_score(
     -------
     pandas.DataFrame
         A DataFrame that contains the best
-        minima value for different task and
-        flow combinations if runs exist.
+        minima value for each task and
+        flow combination if runs exist.
     """
     best_score = -1
     matrix = defaultdict(lambda: dict())
