@@ -49,16 +49,16 @@ def get_tasks_by_measure(data_frame, evaluation_measure='predictive_accuracy'):
             for column in data_frame.columns.values.tolist():
                 # clear the previous results
                 flow_accuracies.clear()
-
-                run_ids = row[column]
-                for run_id in run_ids:
-                    _ = openml.runs.get_run(run_id)
-                    try:
-                        flow_accuracies.append(_.evaluations[evaluation_measure])
-                    except KeyError:
-                        # this evaluation measure is not included
-                        pass
-                matrix[index][column] = np.mean(flow_accuracies).item()
+                if run_ids is not np.NaN:
+                    run_ids = row[column]
+                    for run_id in run_ids:
+                        _ = openml.runs.get_run(run_id)
+                        try:
+                            flow_accuracies.append(_.evaluations[evaluation_measure])
+                        except KeyError:
+                            # this evaluation measure is not included
+                            pass
+                    matrix[index][column] = np.mean(flow_accuracies).item()
 
     return pandas.DataFrame.from_dict(matrix, orient='index')
 
@@ -66,9 +66,11 @@ def get_tasks_by_measure(data_frame, evaluation_measure='predictive_accuracy'):
 def get_tasks_by_minima_region(
     data_frame,
     flow_ids=None,
+    task_restrictions=None,
     order='increasing',
     measure='predictive_accuracy',
-    threshold=0.05
+    threshold=0.05,
+    detailed='No'
 ):
     """Get a DataFrame with different task and flow
      combinations showing how many runs from all using
@@ -84,10 +86,6 @@ def get_tasks_by_minima_region(
 
     Parameters
     ----------
-    flow_ids: set | None
-        Restrictions on which flows to consider.
-        Should be the same as the flows considered
-        in the given data_frame.
     data_frame: pandas.DataFrame
         A pandas DataFrame where the results are organized
         as follows:
@@ -95,6 +93,14 @@ def get_tasks_by_minima_region(
             column - are flows
             values - set if there are runs for the flow and
             task combination, otherwise it is NaN.
+    flow_ids: set | None
+        Restrictions on which flows to consider.
+        Should be the same as the flows considered
+        in the given data_frame.
+    task_restrictions: dict | None
+        Restrictions on which tasks to consider.
+        Should be the same as the task restrictions
+        in the given data_frame.
     order: str
         What to consider as the best value for the run
         prediction. The lowest value 'decreasing'
@@ -105,7 +111,11 @@ def get_tasks_by_minima_region(
     threshold: float
         Maximal difference allowed from the best value
         to consider a run in the minima region.
-
+    detailed: str
+        If 'Yes' the entry values that represent
+        the number of runs from all (using RandomSearch)
+        that reach the minima region will be a
+        tuple and also include the number of all runs.
     Returns
     -------
     pandas.DataFrame
@@ -114,20 +124,20 @@ def get_tasks_by_minima_region(
         the best minima region for different
         task and flow combinations.
     """
-
     # 903 is the id of Philipp Probst
     # His experiments use RandomSearch.
-    if flow_ids is not None:
-        result_extractor = ResultExtractor(
-            *flow_ids,
-            uploader=[903]
-        )
-    else:
-        result_extractor = ResultExtractor(
-            None,
-            uploader=[903]
-        )
 
+    # There will always be 1 task
+    # restriction. The uploader
+    # restriction.
+    if task_restrictions is None:
+        task_restrictions = dict()
+    task_restrictions['uploader'] = [903]
+
+    result_extractor = ResultExtractor(
+        *flow_ids if flow_ids is not None else None,
+        **task_restrictions
+    )
     # DataFrame with the best minimas found
     # for the task and flow combinations.
     best_results_df = get_tasks_by_best_score(data_frame, order=order, measure=measure)
@@ -162,19 +172,23 @@ def get_tasks_by_minima_region(
                     # runs are making use of
                     # RandomSearch
                     random_runs = rand_row[column]
-                    nr_all_runs = len(random_runs)
-                    nr_runs_minima_region = 0
-                    for random_run in random_runs:
-                        _ = openml.runs.get_run(random_run)
+                    if random_runs is not np.NaN:
+                        nr_all_runs = len(random_runs)
+                        nr_runs_minima_region = 0
+                        for random_run in random_runs:
+                            _ = openml.runs.get_run(random_run)
 
-                        try:
-                            predictive_measure = _.evaluations[measure]
-                            if abs(predictive_measure - best_value) <= threshold:
-                                nr_runs_minima_region += 1
-                        except KeyError:
+                            try:
+                                predictive_measure = _.evaluations[measure]
+                                if abs(predictive_measure - best_value) <= threshold:
+                                    nr_runs_minima_region += 1
+                            except KeyError:
                             # this evaluation measure is not included
-                            pass
-                    matrix[index][column] = nr_runs_minima_region / nr_all_runs
+                                pass
+                        if detailed == 'Yes':
+                            matrix[index][column] = (nr_runs_minima_region / nr_all_runs, nr_all_runs)
+                        else:
+                            matrix[index][column] = nr_runs_minima_region / nr_all_runs
 
     return pandas.DataFrame.from_dict(matrix, orient='index')
 
@@ -182,7 +196,7 @@ def get_tasks_by_minima_region(
 def get_tasks_by_best_score(
         data_frame,
         order='increasing',
-        measure='predictive_accuracy'
+        measure='predictive_accuracy',
 ):
     """Return a DataFrame with the best found
     minima value for each entry in the given
