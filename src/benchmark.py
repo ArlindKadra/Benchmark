@@ -56,7 +56,13 @@ elif algorithm == "Random Forest":
 
 # get the results
 results = ResultExtractor(*flow_ids, task_type=1).results
-random_results = get_tasks_by_minima_region(results, flow_ids, detailed='Yes')
+random_results = get_tasks_by_minima_region(
+    results,
+    flow_ids,
+    task_restrictions={'task_type': 1},
+    threshold=0.005,
+    detailed='Yes'
+)
 # aggregate the results over the
 # different versions of the same flow
 aggregated_results = aggregate_results_for_flow(random_results, algorithm)
@@ -73,5 +79,5 @@ aggregated_results.drop(undesired_tasks, inplace=True)
 sorted_df = aggregated_results.sort_values(by=[algorithm])
 
 # save results
-with open(os.path.join(arg_parser.path, algorithm + ".csv"), "w") as file:
+with open(os.path.join(os.path.expanduser(arg_parser.path), algorithm + ".csv"), "w") as file:
     sorted_df.to_csv(file)

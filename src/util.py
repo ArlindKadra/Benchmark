@@ -6,27 +6,28 @@ from openml.exceptions import OpenMLServerError
 import numpy as np
 
 
-def get_flow_ids(*flow_identifiers):
-    """Get flow ids for the given flow identifiers.
+def get_flow_ids(*flow_qualifiers):
+    """Get flow ids for the given
+    flow qualifiers.
 
-    Match the flow identifiers to their flow_ids.
+    Match the flow qualifiers to their
+    corresponding ids.
 
     Parameters
     ----------
 
-    flow_identifiers: list ｜ str
-        flow_identifiers should be a combination
-        of name_version
+    flow_qualifiers: tuple
+        Each flow name can be a combination of
+        flowname and version:
         e.g. 'mlr.classif.ranger_8'.
-        It can also be only a flow name, but in that
-        case, flows with different version will be
-        matched as a flow name only is not a unique
-        flow identifier.
+        or it can also be only a flow name. The
+        later, does not compose a unique flow
+        qualifier.
 
     Returns
     -------
     flow_ids: set
-        Empty set in case there are no identifiers,
+        Empty set in case there are no qualifiers,
         otherwise set with flow_ids.
     """
 
@@ -34,14 +35,14 @@ def get_flow_ids(*flow_identifiers):
     flows = openml.flows.list_flows()
 
     # user gave input for flow identifiers.
-    if len(flow_identifiers) != 0:
-        for flow_identifier in flow_identifiers:
-            version_match = re.search(r"\d+$", flow_identifier)
+    if len(flow_qualifiers) != 0:
+        for flow_qualifier in flow_qualifiers:
+            version_match = re.search(r"\d+$", flow_qualifier)
             if version_match:
                 flow_version = version_match.group(0)
             else:
                 flow_version = None
-            flow_name = re.sub(r"_\d+$", "", flow_identifier)
+            flow_name = re.sub(r"_\d+$", "", flow_qualifier)
 
             for key, flow in flows.items():
                 if flow['name'] == flow_name:
@@ -212,3 +213,29 @@ def tasks_contained_in_openml_cc18(task_ids):
     tasks = set(openml.study.get_study(99).tasks)
 
     return tasks.intersection(task_ids)
+
+
+def join_results(*data_frames):
+    """Given a list of DataFrames,
+    do an outer join and sort the
+    resulting DataFrame.
+
+    Join multiple DataFrames by rows,
+    into a single one that contains the
+    full information. Sort the resulting
+    DataFrame by the index value of rows.
+
+    Parameters
+    ----------
+    data_frames: tuple
+        Set of DataFrames.
+    Returns
+    -------
+    result: pandas.DataFrame
+        Sorted DataFrame that contains all
+        the information.
+    """
+    result = pandas.concat(data_frames, axis=1, sort=False)
+    result.sort_index(inplace=True)
+
+    return result

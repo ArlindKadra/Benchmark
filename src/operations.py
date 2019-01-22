@@ -7,7 +7,10 @@ import openml
 from src.result_extractor import ResultExtractor
 
 
-def get_tasks_by_measure(data_frame, evaluation_measure='predictive_accuracy'):
+def get_tasks_by_measure(
+        data_frame,
+        evaluation_measure='predictive_accuracy'
+):
     """Get a DataFrame of tasks and flow combinations
     and their corresponding evaluation measure.
 
@@ -49,8 +52,9 @@ def get_tasks_by_measure(data_frame, evaluation_measure='predictive_accuracy'):
             for column in data_frame.columns.values.tolist():
                 # clear the previous results
                 flow_accuracies.clear()
+
+                run_ids = row[column]
                 if run_ids is not np.NaN:
-                    run_ids = row[column]
                     for run_id in run_ids:
                         _ = openml.runs.get_run(run_id)
                         try:
@@ -73,16 +77,16 @@ def get_tasks_by_minima_region(
     detailed='No'
 ):
     """Get a DataFrame with different task and flow
-     combinations showing how many runs from all using
-     RandomSearch reach the best found minima region
-     by a certain threshold.
+     combinations showing the franction of runs using
+     RandomSearch that reach the best found minima
+     region by a certain threshold.
 
     The DataFrame contains tasks as rows and flows as
-    columns. The values in the DataFrame indicate how
-    many runs with RandomSearch for that flow and task
-    combination are within the threshold range from the
-    run which represents the best found minima for the
-    given measure.
+    columns. The values in the DataFrame indicate the
+    fraction of runs with RandomSearch for that flow
+    and task combination that are within the threshold
+    range from the run which represents the best found
+    minima for the given measure.
 
     Parameters
     ----------
@@ -113,16 +117,17 @@ def get_tasks_by_minima_region(
         to consider a run in the minima region.
     detailed: str
         If 'Yes' the entry values that represent
-        the number of runs from all (using RandomSearch)
+        fraction of runs (using RandomSearch)
         that reach the minima region will be a
-        tuple and also include the number of all runs.
+        tuple and also include the number of all
+        runs that make use of RandomSearch.
     Returns
     -------
     pandas.DataFrame
-        A DataFrame that shows how many
-        runs from RandomSearch fall into
-        the best minima region for different
-        task and flow combinations.
+        A DataFrame that shows the fraction
+        of runs using RandomSearch that fall
+        into the best minima region for
+        different task and flow combinations.
     """
     # 903 is the id of Philipp Probst
     # His experiments use RandomSearch.
@@ -196,7 +201,7 @@ def get_tasks_by_minima_region(
 def get_tasks_by_best_score(
         data_frame,
         order='increasing',
-        measure='predictive_accuracy',
+        measure='predictive_accuracy'
 ):
     """Return a DataFrame with the best found
     minima value for each entry in the given
